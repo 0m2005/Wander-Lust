@@ -16,6 +16,22 @@ const {listingSchema, reviewSchema} = require("./schema.js");
 
 const Review = require("./models/review.js");
 
+const session = require("express-session");
+const flash = require("connect-flash");
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
+const User = require("./models/user.js");
+const sessionoptions = {
+    secret: "mysupersecretcode",
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        httpOnly: true,
+        expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
+        maxAge: 1000 * 60 * 60 * 24 * 7
+    }
+};
+
 app.use(express.urlencoded({ extended: true }));
 
 
@@ -46,128 +62,38 @@ app.listen(8080 , (res,req)=>{
     console.log("working port is 8080");
 })
 
-const validateListing = (req, res, next) => {
-    let { error } = listingSchema.validate(req.body);
-
-    if(error) {
-        throw new expressError(400, error);
-    } else{
-        next();
-    }
-}
-
-const validateReview = (req, res, next) => {
-    let { error } = reviewSchema.validate(req.body);
-
-    if(error) {
-        throw new expressError(400, error);
-    } else{
-        next();
-    }
-}
-
 app.get("/", (req,res) => {
     res.send("hi , i am root");
 })
 
-app.get("/listings",
-    wrapAsync(async (req,res,next) =>{
-        const allListings=await listing.find({});
-        // console.log(allListings);
-        res.render("index.ejs", { allListings });
-    })
-);
+app.use(session(sessionoptions));
+app.use(flash());
+
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new LocalStrategy(User.authenticate()));
+
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
 
 
-//create new
-app.get("/listing/new", (req,res) =>{
-    res.render("new.ejs");
-})
+app.use((req,res,next) =>{
+    res.locals.success = req.flash("success");
+    res.locals.error = req.flash("error");
+    res.locals.currUser = req.user;
+    next();
+});
+
+const listingRoutes = require("./routes/listing.js");
+app.use("/",listingRoutes);
 
 
-//add new
-app.post("/listing" ,validateListing, wrapAsync(async (req,res,next) =>{
-    
-    let newListing = new listing(req.body.listing);
-    await newListing.save();
-    res.redirect("/listings");
+const reviewRoutes = require("./routes/review.js");
+app.use("/listings/:id/reviews",reviewRoutes);
 
-    console.log(listing);
-    
-}))
+const userRouter = require("./routes/user.js");
+app.use("/", userRouter);
 
-//show
-
-app.get("/listing/:id/show",wrapAsync( async (req,res,next) =>{
-    let {id} = req.params;
-
-    const list = await listing.findById(id).populate("reviews");
-
-    if (!list) {
-        throw new expressError(404, "Listing not found");
-    }
-
-
-    res.render("show.ejs",{list});
-}));
-
-// edit
-
-app.get("/listing/:id/edit",wrapAsync(async (req,res,next) =>{
-    let {id} = req.params;
-
-    const list = await listing.findById(id);
-
-
-    res.render("edit.ejs",{list});
-}))
-
-//edit put
-
-app.put("/listing/:id",
-    validateListing,
-    wrapAsync(async (req,res,next) =>{
-    let {id} = req.params;
-
-    await listing.findByIdAndUpdate(id, req.body.listing);
-
-    res.redirect(`/listing/${id}/show`);
-
-    
-}))
-//delete listing
-app.delete("/listing/:id/delete", wrapAsync(async (req, res,next) => {
-    let {id} = req.params;
-
-    await listing.findByIdAndDelete(id);
-
-    res.redirect("/listings");
-}));
-
-// review route
-
-app.post("/listings/:id/reviews", validateReview,wrapAsync(async (req, res) =>{
-    let list = await listing.findById(req.params.id);
-    let newReview = new Review(req.body.review);
-
-    list.reviews.push(newReview);
-    await newReview.save();
-    await list.save();
-
-    res.redirect(`/listing/${req.params.id}/show`);
-}));
-
-//delete review id
-
-app.delete("/listing/:id/reviews/:reviewId", wrapAsync(async (req, res) =>{
-    let {id , reviewId } = req.params;
-
-    await listing.findByIdAndUpdate(id , {$pull : {reviews : reviewId}});
-
-    await Review.findByIdAndDelete(reviewId);
-
-    res.redirect(`/listing/${id}/show`);
-}));
 
 
 

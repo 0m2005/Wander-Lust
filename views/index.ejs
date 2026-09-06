@@ -1,4 +1,10 @@
 <% layout('layouts/boilerplate') %>
+    <% if(success && success.length > 0) { %>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <%= success %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+<% } %>
     <h2>ALL LISTINGS</h2>
 
 <div class="row row-cols-lg-3 row-cols-md-2 row-col-sm-1">
