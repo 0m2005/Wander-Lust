@@ -8,6 +8,7 @@
 
             <div class="card-body">
                 <h2 class="card-title mb-3"><%= list.title %></h2>
+                <p class="mb-2"><i>Owned by <%= list.owner.username %></i></p>
 
                 <p class="card-text"><%= list.description %></p>
 
@@ -25,6 +26,7 @@
 
                 <p class="text-muted small mt-2">Listing ID: <%= list._id %></p>
 
+                <% if(currUser && list.owner && currUser._id.equals(list.owner._id)) { %>
                 <div class="d-flex gap-2 mt-4 mb-3">
                     <a href="/listing/<%= list._id %>/edit" class="btn btn-outline-dark">
                         <i class="fa-solid fa-pen"></i> Edit
@@ -36,6 +38,7 @@
                         </button>
                     </form>
                 </div>
+                <% } %>
             </div>
         </div>
 
@@ -91,13 +94,16 @@
                             <h6 class="card-subtitle mb-2 text-muted">
                                 Rating: <%= review.rating %>/5
                             </h6>
+                            <p class="mb-2"><strong>@<%= review.author ? review.author.username : 'Unknown' %></strong></p>
                             <p class="card-text"><%= review.comment %></p>
 
-                            <form action="/listing/<%= list._id %>/reviews/<%= review._id %>?_method=DELETE" method="post">
+                            <% if(currUser && review.author && currUser._id.equals(review.author._id)) { %>
+                            <form action="/listings/<%= list._id %>/reviews/<%= review._id %>?_method=DELETE" method="post">
                                 <button class="btn btn-sm btn-outline-danger">
                                     <i class="fa-solid fa-trash"></i> Delete
                                 </button>
                             </form>
+                            <% } %>
                         </div>
                     </div>
                 </div>
